@@ -30,16 +30,16 @@
 #endif
 
 #ifndef LT_P4_SPI_MOSI
-#define LT_P4_SPI_MOSI   28
+#define LT_P4_SPI_MOSI   7
 #endif
 #ifndef LT_P4_SPI_MISO
-#define LT_P4_SPI_MISO   29
+#define LT_P4_SPI_MISO   2
 #endif
 #ifndef LT_P4_SPI_SCLK
-#define LT_P4_SPI_SCLK   30
+#define LT_P4_SPI_SCLK   6
 #endif
 #ifndef LT_P4_SPI_CS
-#define LT_P4_SPI_CS     31   // manual CS controlled via GPIO
+#define LT_P4_SPI_CS     10   // manual CS controlled via GPIO
 #endif
 
 #ifndef LT_P4_SPI_MODE
@@ -71,11 +71,12 @@ static inline void cs_high(void){ gpio_set_level(LT_P4_SPI_CS, 1); }
 /* ───────────────────────── RNG (matches STM32 API) ─────────────────────────
  * STM32: lt_port_random_bytes(uint32_t *buff, uint16_t len) returns len 32-bit words.
  */
-lt_ret_t lt_port_random_bytes(uint32_t *buff, uint16_t len)
+
+ lt_ret_t lt_port_random_bytes(lt_l2_state_t *s2, void *buff, size_t count)
 {
-    if (!buff || len == 0) return LT_OK;
-    for (uint16_t i = 0; i < len; i++) {
-        buff[i] = esp_random();  // HW RNG-backed
+    if (!buff || count == 0) return LT_OK;
+    for (size_t i = 0; i < count; i++) {
+        ((uint8_t *)buff)[i] = esp_random();  // HW RNG-backed
     }
     return LT_OK;
 }
