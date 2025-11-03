@@ -1,8 +1,16 @@
+
+
 cmake_minimum_required(VERSION 3.21.0)
 
 ###########################################################################
 #                                                                         #
 #   libtropic ESP-IDF Component                                           #
+#                                                                         #
+#   ESP-IDF Extension Contribution:                                       #
+#   This file has been extended with minimal vendor crypto dependencies   #
+#   required for ESP-IDF builds. The extension preserves all original     #
+#   libtropic configuration while adding only the essential .c files      #
+#   from trezor_crypto and secp256k1-zkp needed for compilation.          #
 #                                                                         #
 ###########################################################################
 
@@ -119,11 +127,50 @@ set(LIBTROPIC_SRCS
     src/lt_hkdf.c
     src/lt_random.c
     src/lt_asn1_der.c
+
+    # ESP-IDF Extension: Minimal vendor crypto dependencies
+    # This section adds only the essential vendor .c files needed for ESP-IDF builds
+    # instead of using add_subdirectory() which conflicts with ESP-IDF component system
+    
+    # Core trezor_crypto functions required by libtropic
+    vendor/trezor_crypto/sha2.c
+    vendor/trezor_crypto/sha3.c
+    vendor/trezor_crypto/hmac.c
+    vendor/trezor_crypto/memzero.c
+    vendor/trezor_crypto/bignum.c
+    vendor/trezor_crypto/ecdsa.c
+    vendor/trezor_crypto/curves.c
+    vendor/trezor_crypto/secp256k1.c
+    
+    # Essential AES implementation
+    vendor/trezor_crypto/aes/aescrypt.c
+    vendor/trezor_crypto/aes/aeskey.c
+    vendor/trezor_crypto/aes/aestab.c
+    vendor/trezor_crypto/aes/aes_modes.c
+    vendor/trezor_crypto/aes/aesgcm.c
+    
+    # Ed25519 implementation
+    vendor/trezor_crypto/ed25519-donna/curve25519-donna-32bit.c
+    vendor/trezor_crypto/ed25519-donna/curve25519-donna-helpers.c
+    vendor/trezor_crypto/ed25519-donna/modm-donna-32bit.c
+    vendor/trezor_crypto/ed25519-donna/ed25519-donna-basepoint-table.c
+    vendor/trezor_crypto/ed25519-donna/ed25519-donna-32bit-tables.c
+    vendor/trezor_crypto/ed25519-donna/ed25519-donna-impl-base.c
+    vendor/trezor_crypto/ed25519-donna/ed25519.c
+    vendor/trezor_crypto/ed25519-donna/curve25519-donna-scalarmult-base.c
+    
+    # secp256k1-zkp main implementation
+    vendor/secp256k1-zkp/src/secp256k1.c
 )
 
 set(LIBTROPIC_INCLUDE_DIRS
     include
     src
+    vendor
+    vendor/trezor_crypto
+    vendor/trezor_crypto/ed25519-donna
+    vendor/trezor_crypto/aes
+    vendor/secp256k1-zkp/include
 )
 
 # Add FW update files based on silicon revision
@@ -231,11 +278,6 @@ idf_component_register(
     REQUIRES driver esp_system
 )
 
-# Add trezor-crypto as a subdirectory and link it
-add_subdirectory(vendor/trezor_crypto/ "trezor_crypto")
-target_compile_definitions(trezor_crypto PRIVATE AES_VAR USE_INSECURE_PRNG)
-target_link_libraries(${COMPONENT_LIB} PRIVATE trezor_crypto)
-
 # Add compile options
 target_compile_options(${COMPONENT_LIB} PRIVATE -ffunction-sections -fdata-sections)
 target_link_options(${COMPONENT_LIB} INTERFACE -Wl,--gc-sections)
@@ -275,10 +317,18 @@ if(LT_SEPARATE_L3_BUFF)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE LT_SEPARATE_L3_BUFF)
 endif()
 
-# Crypto provider definitions
+# Crypto provider definitions for ESP-IDF builds
 target_compile_definitions(${COMPONENT_LIB} PUBLIC
     LT_CRYPTO_TREZOR=1
     LT_CRYPTO_MBEDTLS=0
+)
+
+# ESP-IDF specific crypto compile definitions
+target_compile_definitions(${COMPONENT_LIB} PRIVATE
+    AES_VAR=1
+    AES_MODES=1
+    USE_INSECURE_PRNG=1
+    LT_LOGGING_ENABLE
 )
 
 # Apply strict compilation flags if needed
@@ -301,3 +351,4 @@ if(LT_STRICT_COMP_FLAGS OR LT_BUILD_EXAMPLES OR LT_BUILD_TESTS)
         -fstack-protector-strong
     )
 endif()
+
