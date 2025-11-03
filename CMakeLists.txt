@@ -4,11 +4,12 @@ cmake_minimum_required(VERSION 3.21.0)
 
 ###########################################################################
 #                                                                         #
-#   libtropic ESP-IDF Component                                           #
+#   libtropic RDDL ESP-IDF Component                                      #
 #                                                                         #
 #   ESP-IDF Extension Contribution:                                       #
 #   This file has been extended with minimal vendor crypto dependencies   #
-#   required for ESP-IDF builds. The extension preserves all original     #
+#   required for ESP-IDF th ECDSA, ED25519, and AES GCM support.          #
+#   The extension preserves all original                                  #
 #   libtropic configuration while adding only the essential .c files      #
 #   from trezor_crypto and secp256k1-zkp needed for compilation.          #
 #                                                                         #
