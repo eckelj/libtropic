@@ -69,7 +69,7 @@ lt_ret_t lt_l3_encrypt_request(lt_l3_state_t *s3)
     struct lt_l3_gen_frame_t *p_frame = (struct lt_l3_gen_frame_t *)s3->buff;
 
     int ret = lt_aesgcm_encrypt(&s3->encrypt, s3->encryption_IV, TR01_L3_IV_SIZE, (uint8_t *)"", 0, p_frame->data,
-                                p_frame->cmd_size, p_frame->data + p_frame->cmd_size,TR01_L3_TAG_SIZE);
+                                 p_frame->cmd_size, p_frame->data + p_frame->cmd_size, TR01_L3_TAG_SIZE);
     if (ret != LT_OK) {
         lt_l3_invalidate_host_session_data(s3);
         return ret;
