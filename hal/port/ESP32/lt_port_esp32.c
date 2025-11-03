@@ -18,7 +18,7 @@
 
 /* libtropic headers (provided by your tree) */
 #include "libtropic_common.h"
-#include "libtropic_port.h"     // lt_handle_t, LT_L1_LEN_MAX, lt_ret_t, LT_OK, etc.
+#include "libtropic_port.h"     // lt_handle_t, TR01_L1_LEN_MAX, lt_ret_t, LT_OK, etc.
 
 #define TAG "lt_port_esp32p4"
 
@@ -30,16 +30,16 @@
 #endif
 
 #ifndef LT_P4_SPI_MOSI
-#define LT_P4_SPI_MOSI   7
+#define LT_P4_SPI_MOSI   23
 #endif
 #ifndef LT_P4_SPI_MISO
-#define LT_P4_SPI_MISO   2
+#define LT_P4_SPI_MISO   22
 #endif
 #ifndef LT_P4_SPI_SCLK
-#define LT_P4_SPI_SCLK   6
+#define LT_P4_SPI_SCLK   21
 #endif
 #ifndef LT_P4_SPI_CS
-#define LT_P4_SPI_CS     10   // manual CS controlled via GPIO
+#define LT_P4_SPI_CS     20   // manual CS controlled via GPIO
 #endif
 
 #ifndef LT_P4_SPI_MODE
@@ -133,7 +133,7 @@ lt_ret_t lt_port_init(lt_handle_t *h)
         .sclk_io_num = LT_P4_SPI_SCLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = LT_L1_LEN_MAX,  // matches your libtropic L1 buffer
+        .max_transfer_sz = TR01_L1_LEN_MAX,  // matches your libtropic L1 buffer
         .flags = 0
     };
 
@@ -198,7 +198,7 @@ lt_ret_t lt_port_spi_transfer(lt_handle_t *h, uint8_t offset, uint16_t tx_data_l
 
     if (!h || !h->l2_buff || !s_dev) return LT_L1_SPI_ERROR;
 
-    if ((size_t)offset + (size_t)tx_data_length > LT_L1_LEN_MAX) {
+    if ((size_t)offset + (size_t)tx_data_length > TR01_L1_LEN_MAX) {
         return LT_L1_DATA_LEN_ERROR;
     }
 

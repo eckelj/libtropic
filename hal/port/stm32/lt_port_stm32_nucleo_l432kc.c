@@ -112,7 +112,7 @@ lt_ret_t lt_port_deinit(lt_handle_t *h)
 
 lt_ret_t lt_port_spi_transfer(lt_handle_t *h, uint8_t offset, uint16_t tx_data_length, uint32_t timeout)
 {
-    if (offset + tx_data_length > LT_L1_LEN_MAX) {
+    if (offset + tx_data_length > TR01_L1_LEN_MAX) {
         return LT_L1_DATA_LEN_ERROR;
     }
     int ret = HAL_SPI_TransmitReceive(&SpiHandle, h->l2_buff + offset, h->l2_buff + offset, tx_data_length, timeout);

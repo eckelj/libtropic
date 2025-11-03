@@ -344,7 +344,7 @@ lt_ret_t lt_port_spi_transfer (lt_handle_t *h, uint8_t offset, uint16_t tx_data_
     UNUSED(h);
     UNUSED(timeout);
 
-    if (offset + tx_data_length > LT_L1_LEN_MAX) {
+    if (offset + tx_data_length > TR01_L1_LEN_MAX) {
         return LT_L1_DATA_LEN_ERROR;
     }
 

@@ -129,7 +129,7 @@ lt_ret_t lt_l2_send_encrypted_cmd(lt_l2_state_t *s2, uint8_t *buff, uint16_t max
     // Split encrypted buffer into chunks and proceed them into l2 transfers:
     for (int i = 0; i < chunk_num; i++) {
         req->req_id = TR01_L2_ENCRYPTED_CMD_REQ_ID;
-        // If the currently processed chunk is the last one, get its length (may be shorter than L2_CHUNK_MAX_DATA_SIZE)
+        // If the currently processed chunk is the last one, get its length (may be shorter than TR01_L2_CHUNK_MAX_DATA_SIZE)
         if (i == (chunk_num - 1)) {
             req->req_len = last_chunk_len;
         }

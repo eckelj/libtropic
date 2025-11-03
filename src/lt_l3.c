@@ -23,7 +23,8 @@ lt_ret_t lt_l3_nonce_init(lt_handle_t *h)
         return LT_PARAM_ERR;
     }
 #endif
-    memset(&h->IV,0,12);
+    memset(&h->l3.encryption_IV,0,12);
+    memset(&h->l3.decryption_IV,0,12);
     return LT_OK;
 }
 
@@ -34,13 +35,20 @@ lt_ret_t lt_l3_nonce_increase(lt_handle_t *h)
         return LT_PARAM_ERR;
     }
 #endif
-    uint32_t nonce = (h->IV[3] << 24) | (h->IV[2] << 16) | (h->IV[1] << 8) | (h->IV[0]);
+    uint32_t en_nonce = (h->l3.encryption_IV[3] << 24) | (h->l3.encryption_IV[2] << 16) | (h->l3.encryption_IV[1] << 8) | (h->l3.encryption_IV[0]);
+    uint32_t de_nonce = (h->l3.decryption_IV[3] << 24) | (h->l3.decryption_IV[2] << 16) | (h->l3.decryption_IV[1] << 8) | (h->l3.decryption_IV[0]);
 
-    nonce ++;
-    h->IV[3] = nonce >> 24;
-    h->IV[2] = (nonce & 0x00FF0000) >> 16;
-    h->IV[1] = (nonce & 0x0000FF00) >> 8;
-    h->IV[0] = (nonce & 0x000000FF);
+    en_nonce ++;
+    h->l3.encryption_IV[3] = en_nonce >> 24;
+    h->l3.encryption_IV[2] = (en_nonce & 0x00FF0000) >> 16;
+    h->l3.encryption_IV[1] = (en_nonce & 0x0000FF00) >> 8;
+    h->l3.encryption_IV[0] = (en_nonce & 0x000000FF);
+
+    de_nonce ++;
+    h->l3.decryption_IV[3] = de_nonce >> 24;
+    h->l3.decryption_IV[2] = (de_nonce & 0x00FF0000) >> 16;
+    h->l3.decryption_IV[1] = (de_nonce & 0x0000FF00) >> 8;
+    h->l3.decryption_IV[0] = (de_nonce & 0x000000FF);
 
     return LT_OK;
 }
@@ -52,13 +60,13 @@ lt_ret_t lt_l3_cmd(lt_handle_t *h)
         return LT_PARAM_ERR;
     }
 #endif
-    if(h->session != SESSION_ON) {
+    if(h->l3.session_status != LT_SECURE_SESSION_ON) {
         return LT_HOST_NO_SESSION;
     }
 
-    struct lt_l3_gen_frame_t * p_frame = (struct lt_l3_gen_frame_t*)h->l3_buff;
+    struct lt_l3_gen_frame_t * p_frame = (struct lt_l3_gen_frame_t*)h->l3.buff;
 
-    int ret = lt_aesgcm_encrypt(&h->encrypt, h->IV, L3_IV_SIZE, (uint8_t *)"", 0, p_frame->data, p_frame->cmd_size, p_frame->data + p_frame->cmd_size, L3_TAG_SIZE);
+    int ret = lt_aesgcm_encrypt(&h->l3.encrypt, h->l3.encryption_IV, TR01_L3_IV_SIZE, (uint8_t *)"", 0, p_frame->data, p_frame->cmd_size, p_frame->data + p_frame->cmd_size, TR01_L3_TAG_SIZE);
     if (ret != LT_OK) {
         return ret;
     }
@@ -68,7 +76,7 @@ lt_ret_t lt_l3_cmd(lt_handle_t *h)
         return ret;
     }
 
-    ret = lt_aesgcm_decrypt(&h->decrypt, h->IV, L3_IV_SIZE, (uint8_t *)"", 0, p_frame->data, p_frame->cmd_size, p_frame->data + p_frame->cmd_size, L3_TAG_SIZE);
+    ret = lt_aesgcm_decrypt(&h->l3.decrypt, h->l3.decryption_IV, TR01_L3_IV_SIZE, (uint8_t *)"", 0, p_frame->data, p_frame->cmd_size, p_frame->data + p_frame->cmd_size, TR01_L3_TAG_SIZE);
     if (ret != LT_OK) {
         return ret;
     }

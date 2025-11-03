@@ -29,7 +29,7 @@ lt_ret_t lt_port_random_bytes(lt_l2_state_t *s2, void *buff, size_t count) {
 #ifdef USE_UART
 
 #define MIN_UART_PAYLOAD_LEN  3
-#define MAX_UART_BUFFER_LEN  (MIN_UART_PAYLOAD_LEN + LT_L1_LEN_MAX)
+#define MAX_UART_BUFFER_LEN  (MIN_UART_PAYLOAD_LEN + TR01_L1_LEN_MAX)
 
 // This structure holds data transported over uart
 typedef struct
@@ -41,7 +41,7 @@ typedef struct
         {
             uint8_t  TAG;
             uint16_t LENGTH;
-            uint8_t  PAYLOAD[LT_L1_LEN_MAX];
+            uint8_t  PAYLOAD[TR01_L1_LEN_MAX];
         };
     };
 } buffer_s;
@@ -357,7 +357,7 @@ lt_ret_t lt_port_deinit(lt_handle_t *h)
 
 lt_ret_t lt_port_spi_transfer(lt_handle_t *h, uint8_t offset, uint16_t tx_data_length, uint32_t timeout)
 {
-    if (offset + tx_data_length > LT_L1_LEN_MAX) {
+    if (offset + tx_data_length > TR01_L1_LEN_MAX) {
         return LT_L1_DATA_LEN_ERROR;
     }
     int ret = HAL_SPI_TransmitReceive(&SpiHandle, h->l2_buff + offset, h->l2_buff + offset, tx_data_length, timeout);
