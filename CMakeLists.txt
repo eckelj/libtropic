@@ -229,11 +229,6 @@ set(LIBTROPIC_INCLUDE_DIRS
 )
 
 
-###########################################################################	
-# Libtropic fw update:                                                    #	
-# Compile only selected FW version for dedicated silicon version          #
-###########################################################################
-# Add FW update files based on silicon revision
 if (LT_SILICON_REV STREQUAL "ABAB")
     set(BL_FOLDER boot_v_1_0_1)
 elseif (LT_SILICON_REV STREQUAL "ACAB")
