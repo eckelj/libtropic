@@ -63,7 +63,7 @@ int lt_ex_hello_world_separate_API(lt_handle_t *h)
     lt_host_eph_keys_t host_eph_keys = {0};
 
     // Initialize session from a server side by creating host_eph_keys->ehpriv and host_eph_keys->ehpub,
-    // l2 request is prepared into handle's buffer (h->l2)
+    // l2 request is prepared into handle's buffer (h->l2.buff)
     LT_LOG_INFO("Executing lt_out__session_start()...");
     ret = lt_out__session_start(h, TR01_PAIRING_KEY_SLOT_INDEX_0, &host_eph_keys);
     if (LT_OK != ret) {
