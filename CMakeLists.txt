@@ -1,5 +1,3 @@
-
-
 cmake_minimum_required(VERSION 3.21.0)
 
 ###########################################################################
@@ -8,14 +6,20 @@ cmake_minimum_required(VERSION 3.21.0)
 #                                                                         #
 ###########################################################################
 
-# Note: Strict compile flags are handled later in the ESP-IDF component section
-# include(cmake/strict_compile_flags.cmake)
+# Check if we have ESP-IDF environment
+if(DEFINED ENV{IDF_PATH})
+    # ESP-IDF component mode - defer the include until later
+    set(LT_ESP_IDF_COMPONENT TRUE)
+else()
+    # Standalone build mode
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/strict_compile_flags.cmake)
+    set(LT_ESP_IDF_COMPONENT FALSE)
+endif()
 
-# Options for the component
 option(LT_BUILD_EXAMPLES "Compile example code as part of libtropic library" OFF)
 option(LT_BUILD_TESTS "Compile functional tests' code as part of libtropic library" OFF)
 # This switch controls if helper utilities are compiled in. In most cases this should be ON,
-# examples and tests need to have helpers utilities compiled.	
+# examples and tests need to have helpers utilities compiled.
 # Switch it off to compile only basic libtropic API.
 option(LT_HELPERS "Compile helper function" ON)
 # Enable usage of INT pin during communication. Instead of polling for response,
@@ -32,14 +36,11 @@ set(LT_SILICON_REV "ACAB" CACHE STRING "Set TROPIC01 silicon revision")
 set_property(CACHE LT_SILICON_REV PROPERTY STRINGS "ABAB" "ACAB")
 
 # Used for compiling the correct FW update files
-# TROPIC01 FW version
-# Available versions can be seen in the compatibility table in the main README.md.	
+# Available versions can be seen in the compatibility table in the main README.md.
 # Always use bundled versions from "TROPIC01_fw_update_files" folder!
 set(LT_CPU_FW_VERSION "1_0_1" CACHE STRING "Set TROPIC01 FW version")
 set_property(CACHE LT_CPU_FW_VERSION PROPERTY STRINGS "1_0_0" "1_0_1")
 # Validate specified version
-
-# Validate FW version
 get_property(lt_cpu_fw_version_choices CACHE LT_CPU_FW_VERSION PROPERTY STRINGS)
 set(cpu_fw_valid FALSE)
 foreach(cpu_fw_choice IN LISTS lt_cpu_fw_version_choices)
@@ -53,8 +54,13 @@ if (NOT cpu_fw_valid)
 endif()
 
 # Crypto provider
-set(LT_CRYPTO "trezor_crypto" CACHE STRING "Set a cryptography provider")
-# set_property(CACHE LT_CRYPTO PROPERTY STRINGS "trezor_crypto" "mbedtls")  # uncomment this after mbedtls is ready	set_property(CACHE LT_CRYPTO PROPERTY STRINGS "trezor_crypto")
+if(LT_ESP_IDF_COMPONENT)
+    # For ESP-IDF, default to trezor_crypto since mbedtls integration is not ready yet
+    set(LT_CRYPTO "trezor_crypto" CACHE STRING "Set a cryptography provider")
+else()
+    set(LT_CRYPTO "" CACHE STRING "Set a cryptography provider")
+endif()
+# set_property(CACHE LT_CRYPTO PROPERTY STRINGS "trezor_crypto" "mbedtls")  # uncomment this after mbedtls is ready
 set_property(CACHE LT_CRYPTO PROPERTY STRINGS "trezor_crypto")              # delete this after mbedtls is ready
 
 # Logging options
@@ -70,7 +76,6 @@ if(LT_BUILD_TESTS OR LT_BUILD_EXAMPLES)
 endif()
 
 # These are internal macros for enabling the logging macros
-# Internal logging macros (default: all logging disabled)
 # Default: all logging disabled
 set(LT_LOG_ENABLE_INFO  0 CACHE INTERNAL "")
 set(LT_LOG_ENABLE_WARN  0 CACHE INTERNAL "")
@@ -105,7 +110,6 @@ elseif(LT_LOG_LVL STREQUAL "Error")
     set(LT_LOG_ENABLE_INFO  0)
     set(LT_LOG_ENABLE_WARN  0)
     set(LT_LOG_ENABLE_ERROR 1)
-
 elseif(LT_LOG_LVL STREQUAL "None")
     message(STATUS "Log level set to NONE (logging is disabled)")
 elseif(NOT LT_LOG_LVL)
@@ -116,27 +120,27 @@ else()
 endif()
 
 # Define the ASAN flags here so they are not duplicated.
-set(LT_ASAN_COMPILE_FLAGS "-fsanitize=address,leak,undefined;-fno-omit-frame-pointer;-g"	
-    CACHE INTERNAL "Robust compile flags for Sanitizers (ASan, LSan, UBSan)")	
+set(LT_ASAN_COMPILE_FLAGS "-fsanitize=address,leak,undefined;-fno-omit-frame-pointer;-g"
+    CACHE INTERNAL "Robust compile flags for Sanitizers (ASan, LSan, UBSan)")
 
-set(LT_ASAN_LINK_FLAGS "-fsanitize=address,leak,undefined;-static-libasan"	
-    CACHE INTERNAL "Link flags for Sanitizers (ASan, LSan, UBSan)")	
+set(LT_ASAN_LINK_FLAGS "-fsanitize=address,leak,undefined;-static-libasan"
+    CACHE INTERNAL "Link flags for Sanitizers (ASan, LSan, UBSan)")
 
-set(DEFAULT_LAB_BATCH_PKG_DIR	
-    "2025-06-27T07-51-29Z__prod_C2S_T200__provisioning__lab_batch_package/"	
-    CACHE STRING	
-    "Default lab batch package directory"	
-)	
-set(LT_SH0_PRIV_PATH_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/provisioning_data/${DEFAULT_LAB_BATCH_PKG_DIR}sh0_key_pair/sh_x25519_private_key_2025-03-24T09-15-15Z.pem")	
-set(LT_SH0_PRIV_PATH	
-    "${LT_SH0_PRIV_PATH_DEFAULT}"	
-    CACHE FILEPATH	
-    "Path to file with SH0 private key in PEM or DER format (only used when LT_BUILD_EXAMPLES or LT_BUILD_TESTS set)"	
-)	
+set(DEFAULT_LAB_BATCH_PKG_DIR
+    "2025-06-27T07-51-29Z__prod_C2S_T200__provisioning__lab_batch_package/"
+    CACHE STRING
+    "Default lab batch package directory"
+)
+set(LT_SH0_PRIV_PATH_DEFAULT "${CMAKE_CURRENT_SOURCE_DIR}/provisioning_data/${DEFAULT_LAB_BATCH_PKG_DIR}sh0_key_pair/sh_x25519_private_key_2025-03-24T09-15-15Z.pem")
+set(LT_SH0_PRIV_PATH
+    "${LT_SH0_PRIV_PATH_DEFAULT}"
+    CACHE FILEPATH
+    "Path to file with SH0 private key in PEM or DER format (only used when LT_BUILD_EXAMPLES or LT_BUILD_TESTS set)"
+)
 
-# Check whether compiling standalone (e.g. as a library) or as a child project (= has parent scope)	
-# and save result to HAS_PARENT_SCOPE.	
-get_directory_property(HAS_PARENT_SCOPE PARENT_DIRECTORY)	
+# Check whether compiling standalone (e.g. as a library) or as a child project (= has parent scope)
+# and save result to HAS_PARENT_SCOPE.
+get_directory_property(HAS_PARENT_SCOPE PARENT_DIRECTORY)
 
 ###########################################################################
 #                                                                         #
@@ -144,17 +148,19 @@ get_directory_property(HAS_PARENT_SCOPE PARENT_DIRECTORY)
 #                                                                         #
 #   SDK_SRCS:       source files                                          #
 #   SDK_INCS:       header files                                          #
-#   SDK_DIRS_PRIV:  private directories                                   #	
-#   SDK_DIRS_PUB:   public directories                                    #	
-#                                                                         #	
+#   SDK_DIRS_PRIV:  private directories                                   #
+#   SDK_DIRS_PUB:   public directories                                    #
+#                                                                         #
 ###########################################################################
-# Note: project() command commented out for ESP-IDF component build
-# project(libtropic_SDK
-#         VERSION 2.0.0	    # Crypto sources
-#         DESCRIPTION "TROPIC01 software development kit"
-#         HOMEPAGE_URL "www.tropicsquare.com"
-#         LANGUAGES C)
 
+# Only define project in standalone mode, not for ESP-IDF components
+if(NOT LT_ESP_IDF_COMPONENT)
+    project(libtropic_SDK
+            VERSION 2.0.0
+            DESCRIPTION "TROPIC01 software development kit"
+            HOMEPAGE_URL "www.tropicsquare.com"
+            LANGUAGES C)
+endif()
 
 ##########
 # CRYPTO #
@@ -176,59 +182,52 @@ set(SDK_SRCS ${SDK_SRCS}
 set(SDK_SRCS ${SDK_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/keys/keys.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/libtropic.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_crc16.c	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1_port_wrap.c	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1.c	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/libtropic_l2.c	
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_crc16.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1_port_wrap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/libtropic_l2.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l2_frame_check.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l3_process.c	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/libtropic_l3.c	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_hkdf.c	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_random.c	
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l3_process.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/libtropic_l3.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_hkdf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_random.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_asn1_der.c
 )
 
 set(SDK_INCS ${SDK_INCS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_common.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_port.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_l2.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_l3.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_crc16.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1_port_wrap.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l2_frame_check.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l3_process.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_hkdf.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_random.h	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_asn1_der.h	
-)	
-set(SDK_DIRS_PRIV ${SDK_DIRS_PRIV}	
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/	
-)	
-set(SDK_DIRS_PUB ${SDK_DIRS_PUB}	
-    ${CMAKE_CURRENT_SOURCE_DIR}/include	
-)	
-
-
-###########################################################################	
-# Libtropic fw update:                                                    #	
-# Compile only selected FW version for dedicated silicon version          #	
-###########################################################################
-
-
-
-set(LIBTROPIC_INCLUDE_DIRS
-    include
-    src
-    vendor
-    vendor/trezor_crypto
-    vendor/trezor_crypto/ed25519-donna
-    vendor/trezor_crypto/aes
-    vendor/secp256k1-zkp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_common.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_port.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_l2.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_l3.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_crc16.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1_port_wrap.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l1.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l2_frame_check.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_l3_process.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_hkdf.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_random.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_asn1_der.h
+)
+set(SDK_DIRS_PRIV ${SDK_DIRS_PRIV}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/
+)
+set(SDK_DIRS_PUB ${SDK_DIRS_PUB}
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Add trezor_crypto headers to public includes if using trezor_crypto
+if(LT_CRYPTO STREQUAL "trezor_crypto")
+    set(SDK_DIRS_PUB ${SDK_DIRS_PUB}
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/ed25519-donna
+    )
+endif()
 
+###########################################################################
+# Libtropic fw update:                                                    #
+# Compile only selected FW version for dedicated silicon version          #
+###########################################################################
 if (LT_SILICON_REV STREQUAL "ABAB")
     set(BL_FOLDER boot_v_1_0_1)
 elseif (LT_SILICON_REV STREQUAL "ACAB")
@@ -239,37 +238,31 @@ else()
 endif()
 
 set(SDK_INCS ${SDK_INCS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}/fw_CPU.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}/fw_SPECT.h
+)
 
-${CMAKE_CURRENT_SOURCE_DIR}/TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}/fw_CPU.h	    TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}
-    ${CMAKE_CURRENT_SOURCE_DIR}/TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}/fw_SPECT.h	
-)	
-
-set(SDK_DIRS_PUB ${SDK_DIRS_PUB}	
-    ${CMAKE_CURRENT_SOURCE_DIR}/TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}/	
+set(SDK_DIRS_PUB ${SDK_DIRS_PUB}
+    ${CMAKE_CURRENT_SOURCE_DIR}/TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}/
 )
 
 
-list(APPEND LIBTROPIC_INCLUDE_DIRS
-    TROPIC01_fw_update_files/${BL_FOLDER}/fw_v_${LT_CPU_FW_VERSION}
-)
-
-
-###########################################################################	
-# Libtropic examples:                                                     #	
-# Collect files to be compiled when "examples" are enabled                #	
-###########################################################################	
-set(LIBTROPIC_EXAMPLE_LIST	
-    lt_ex_show_chip_id_and_fwver	
-    lt_ex_hello_world_separate_API	
-    lt_ex_hello_world	
-    lt_ex_hardware_wallet	
-    lt_ex_macandd	
+###########################################################################
+# Libtropic examples:                                                     #
+# Collect files to be compiled when "examples" are enabled                #
+###########################################################################
+set(LIBTROPIC_EXAMPLE_LIST
+    lt_ex_show_chip_id_and_fwver
+    lt_ex_hello_world_separate_API
+    lt_ex_hello_world
+    lt_ex_hardware_wallet
+    lt_ex_macandd
     lt_ex_fw_update
 )
 
 # Export example list to parent project (usually platform-specific implementation) if parent project exists.
 if (HAS_PARENT_SCOPE)
-    set(LIBTROPIC_EXAMPLE_LIST ${LIBTROPIC_EXAMPLE_LIST} PARENT_SCOPE)	
+    set(LIBTROPIC_EXAMPLE_LIST ${LIBTROPIC_EXAMPLE_LIST} PARENT_SCOPE)
 endif()
 
 if(LT_BUILD_EXAMPLES)
@@ -280,108 +273,106 @@ if(LT_BUILD_EXAMPLES)
         ${CMAKE_CURRENT_SOURCE_DIR}/examples/lt_ex_hello_world.c
         ${CMAKE_CURRENT_SOURCE_DIR}/examples/lt_ex_hw_wallet.c
         ${CMAKE_CURRENT_SOURCE_DIR}/examples/lt_ex_macandd.c
-    )	
-    set(SDK_DIRS_PUB ${SDK_DIRS_PUB}	
-        ${CMAKE_CURRENT_SOURCE_DIR}/examples/	
+    )
+    set(SDK_DIRS_PUB ${SDK_DIRS_PUB}
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples/
     )
 endif()
 
 # Create an example registry based on the example list above. This example registry is then included
-# in platform-specific main.c. Only generate if examples are enabled or if there's a parent scope.
-if(LT_BUILD_EXAMPLES OR HAS_PARENT_SCOPE)
-    set(LIBTROPIC_EXAMPLE_FUNCTIONS_CONTENT "")	
-    foreach(example_name ${LIBTROPIC_EXAMPLE_LIST})	
-        # Create a correct macro from example name.	
-        string(TOUPPER ${example_name} example_macro)	
-        string(REPLACE " " "_" example_macro ${example_macro})	
-        string(APPEND LIBTROPIC_EXAMPLE_FUNCTIONS_CONTENT	
-            "#elif defined(${example_macro})\n"	
-            "__lt_ex_return_val__ = ${example_name}(&__lt_handle__);\n"	
-        )	
-    endforeach()	
-
-    configure_file(	
-        ${CMAKE_CURRENT_SOURCE_DIR}/examples/lt_ex_registry_template.c.inc	
-        ${CMAKE_CURRENT_BINARY_DIR}/lt_ex_registry.c.inc	
-        @ONLY	
+# in platform-specific main.c.
+set(LIBTROPIC_EXAMPLE_FUNCTIONS_CONTENT "")
+foreach(example_name ${LIBTROPIC_EXAMPLE_LIST})
+    # Create a correct macro from example name.
+    string(TOUPPER ${example_name} example_macro)
+    string(REPLACE " " "_" example_macro ${example_macro})
+    string(APPEND LIBTROPIC_EXAMPLE_FUNCTIONS_CONTENT
+        "#elif defined(${example_macro})\n"
+        "__lt_ex_return_val__ = ${example_name}(&__lt_handle__);\n"
     )
-endif()	
+endforeach()
 
-###########################################################################	
-# LIBTROPIC FUNCTIONAL TESTS                                              #	
-# Define test function names and source files which contain               #	
-# implementation.                                                         #	
-#                                                                         #	
-# This is the ONLY place where tests should be defined. The list is then  #	
-# pulled by platform-specific implementation and CTest is configured      #	
-# automatically.                                                          #	
-###########################################################################	
-# Define a list of tests. The names should equal to respective functions which implement the test,	
-# this name is also by CTest to identify the test and also used to create a macro (uppercase format)	
-# which is used for test selection.	
-set(LIBTROPIC_TEST_LIST	
-    lt_test_rev_ecdsa_sign	
-    lt_test_rev_eddsa_sign	
-    lt_test_ire_pairing_key_slots	
-    lt_test_ire_write_i_config	
-    lt_test_rev_ping	
-    lt_test_rev_r_mem	
-    lt_test_rev_erase_r_config	
-    lt_test_rev_handshake_req	
-    lt_test_rev_mcounter	
-    lt_test_rev_get_info_req_app	
-    lt_test_rev_get_info_req_bootloader	
-    lt_test_rev_read_i_config	
-    lt_test_rev_read_r_config	
-    lt_test_rev_resend_req	
-    lt_test_rev_sleep_req	
-    lt_test_rev_startup_req	
-    lt_test_rev_write_r_config	
-    lt_test_rev_ecc_key_generate	
-    lt_test_rev_ecc_key_store	
-    lt_test_rev_random_value_get	
-    lt_test_rev_mac_and_destroy	
-    lt_test_rev_get_log_req	
-)	
-
-# Export test list to parent project (usually platform-specific implementation) if parent project exists.	
-if (HAS_PARENT_SCOPE)	
-    set(LIBTROPIC_TEST_LIST ${LIBTROPIC_TEST_LIST} PARENT_SCOPE)	
-endif()	
-
-# Create a test registry based on the test list above. This test registry is then included	
-# in platform-specific main.c. Only generate if tests are enabled or if there's a parent scope.
-if(LT_BUILD_TESTS OR HAS_PARENT_SCOPE)
-    set(LIBTROPIC_TEST_FUNCTIONS_CONTENT "")	
-    foreach(test_name ${LIBTROPIC_TEST_LIST})	
-        # Create a correct macro from test name.	
-        string(TOUPPER ${test_name} test_macro)	
-        string(REPLACE " " "_" test_macro ${test_macro})	
-        string(APPEND LIBTROPIC_TEST_FUNCTIONS_CONTENT	
-            "#elif defined(${test_macro})\n"	
-            "  ${test_name}(&__lt_handle__);\n"	
-        )	
-    endforeach()	
-
-    configure_file(	
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_registry_template.c.inc	
-        ${CMAKE_CURRENT_BINARY_DIR}/lt_test_registry.c.inc	
-        @ONLY	
+# Only configure example registry in standalone mode
+if(NOT LT_ESP_IDF_COMPONENT)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples/lt_ex_registry_template.c.inc
+        ${CMAKE_CURRENT_BINARY_DIR}/lt_ex_registry.c.inc
+        @ONLY
     )
-endif()	
+endif()
 
-# Add source files which actually implement the tests.	
-# This could probably also be automatically generated by the test list, but I wanted to leave	
+###########################################################################
+# LIBTROPIC FUNCTIONAL TESTS                                              #
+# Define test function names and source files which contain               #
+# implementation.                                                         #
+#                                                                         #
+# This is the ONLY place where tests should be defined. The list is then  #
+# pulled by platform-specific implementation and CTest is configured      #
+# automatically.                                                          #
+###########################################################################
+# Define a list of tests. The names should equal to respective functions which implement the test,
+# this name is also by CTest to identify the test and also used to create a macro (uppercase format)
+# which is used for test selection.
+set(LIBTROPIC_TEST_LIST
+    lt_test_rev_ecdsa_sign
+    lt_test_rev_eddsa_sign
+    lt_test_ire_pairing_key_slots
+    lt_test_ire_write_i_config
+    lt_test_rev_ping
+    lt_test_rev_r_mem
+    lt_test_rev_erase_r_config
+    lt_test_rev_handshake_req
+    lt_test_rev_mcounter
+    lt_test_rev_get_info_req_app
+    lt_test_rev_get_info_req_bootloader
+    lt_test_rev_read_i_config
+    lt_test_rev_read_r_config
+    lt_test_rev_resend_req
+    lt_test_rev_sleep_req
+    lt_test_rev_startup_req
+    lt_test_rev_write_r_config
+    lt_test_rev_ecc_key_generate
+    lt_test_rev_ecc_key_store
+    lt_test_rev_random_value_get
+    lt_test_rev_mac_and_destroy
+    lt_test_rev_get_log_req
+)
+
+# Export test list to parent project (usually platform-specific implementation) if parent project exists.
+if (HAS_PARENT_SCOPE)
+    set(LIBTROPIC_TEST_LIST ${LIBTROPIC_TEST_LIST} PARENT_SCOPE)
+endif()
+
+# Create a test registry based on the test list above. This test registry is then included
+# in platform-specific main.c.
+set(LIBTROPIC_TEST_FUNCTIONS_CONTENT "")
+foreach(test_name ${LIBTROPIC_TEST_LIST})
+    # Create a correct macro from test name.
+    string(TOUPPER ${test_name} test_macro)
+    string(REPLACE " " "_" test_macro ${test_macro})
+    string(APPEND LIBTROPIC_TEST_FUNCTIONS_CONTENT
+        "#elif defined(${test_macro})\n"
+        "  ${test_name}(&__lt_handle__);\n"
+    )
+endforeach()
+
+# Only configure test registry in standalone mode
+if(NOT LT_ESP_IDF_COMPONENT)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_registry_template.c.inc
+        ${CMAKE_CURRENT_BINARY_DIR}/lt_test_registry.c.inc
+        @ONLY
+    )
+endif()
+
+# Add source files which actually implement the tests.
+# This could probably also be automatically generated by the test list, but I wanted to leave
 # a bit of flexibility for a case where one would want to implement more tests in one file etc.
-
-
-# Add test sources if enabled
 if(LT_BUILD_TESTS)
- set(SDK_SRCS ${SDK_SRCS}	    
+    set(SDK_SRCS ${SDK_SRCS}
         # Special file with stuff common for testing.
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_common.c
 
-        tests/functional/lt_test_rev_eddsa_sign.c
         # Files which include test functions definitions.
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_ecdsa_sign.c
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_eddsa_sign.c
@@ -400,27 +391,26 @@ if(LT_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_sleep_req.c
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_startup_req.c
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_write_r_config.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_random_value_get.c
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_ecc_key_generate.c
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_ecc_key_store.c
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_random_value_get.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_mac_and_destroy.c	
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_get_log_req.c	
-    )	
-    set(SDK_DIRS_PUB ${SDK_DIRS_PUB}	
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/	
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_mac_and_destroy.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/lt_test_rev_get_log_req.c
+    )
+    set(SDK_DIRS_PUB ${SDK_DIRS_PUB}
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/functional/
     )
 endif()
 
 # Only add key generation logic if examples or tests are being compiled
 if (LT_BUILD_EXAMPLES OR LT_BUILD_TESTS)
-    
+
     if (LT_SH0_PRIV_PATH STREQUAL "")
         message(FATAL_ERROR "LT_SH0_PRIV_PATH must be set when LT_BUILD_EXAMPLES or LT_BUILD_TESTS is enabled.")
     endif()
 
     if (LT_SH0_PRIV_PATH STREQUAL LT_SH0_PRIV_PATH_DEFAULT)
-        message(STATUS "Using default LT_SH0_PRIV_PATH:\n${LT_SH0_PRIV_PATH}")	
+        message(STATUS "Using default LT_SH0_PRIV_PATH:\n${LT_SH0_PRIV_PATH}")
     endif()
 
     set(SH0_PRIV_RAW_FILE "${CMAKE_BINARY_DIR}/sh0_priv.bin")
@@ -448,36 +438,45 @@ if (LT_BUILD_EXAMPLES OR LT_BUILD_TESTS)
         VERBATIM
     )
 
+
     # Ensure the tropic target depends on the generated file
-    list(APPEND LIBTROPIC_SRCS "${KEYS_C_FILE}")
+    list(APPEND SDK_SRCS "${KEYS_C_FILE}")
 endif()
 
-# Combine SDK sources with LIBTROPIC sources
-list(APPEND LIBTROPIC_SRCS ${SDK_SRCS})
-list(APPEND LIBTROPIC_INCLUDE_DIRS ${SDK_DIRS_PUB})
+# Create library differently based on build environment
+if(LT_ESP_IDF_COMPONENT)
+    # ESP-IDF component mode
+    idf_component_register(SRCS ${SDK_SRCS}
+                         INCLUDE_DIRS ${SDK_DIRS_PUB}
+                         PRIV_INCLUDE_DIRS ${SDK_DIRS_PRIV}
+                         REQUIRES mbedtls)
+    
+    # Set the component (library) name for ESP-IDF
+    set(COMPONENT_LIB __idf_libtropic)
+    
+    # Include the strict compile flags here for ESP-IDF mode
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/strict_compile_flags.cmake")
+        include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/strict_compile_flags.cmake)
+    endif()
+else()
+    # Standalone library mode
+    add_library(tropic ${SDK_SRCS} ${SDK_INCS})
+    set(COMPONENT_LIB tropic)
 
-###########################################################################
-# Register ESP-IDF Component                                              #
-###########################################################################
+    target_include_directories(tropic PRIVATE ${SDK_DIRS_PRIV})
+    target_include_directories(tropic PUBLIC ${SDK_DIRS_PUB})
 
-idf_component_register(
-    SRCS ${LIBTROPIC_SRCS}
-    INCLUDE_DIRS ${LIBTROPIC_INCLUDE_DIRS}
-    PRIV_INCLUDE_DIRS ${SDK_DIRS_PRIV}
-    REQUIRES driver esp_system
-)
+    # Compiler flags: These are an internal implementation detail.
+    # They are needed to build the library's own object files correctly.
+    # 'PRIVATE' applies them only to the 'tropic' target itself.
+    target_compile_options(tropic PRIVATE -ffunction-sections -fdata-sections)
+    # Linker flags: This is a usage requirement for any consumer.
+    # The final executable that links against 'tropic' needs this flag.
+    # 'INTERFACE' propagates this requirement to the consumer without
+    # applying it to the library target itself.
+    target_link_options(tropic INTERFACE -Wl,--gc-sections)
+endif()
 
-# Compiler flags: These are an internal implementation detail.
-# They are needed to build the library's own object files correctly.
-# 'PRIVATE' applies them only to the ESP-IDF component target itself
-target_compile_options(${COMPONENT_LIB} PRIVATE -ffunction-sections -fdata-sections)
-# Linker flags: This is a usage requirement for any consumer.	
-# The final executable that links against the component needs this flag.	
-# 'INTERFACE' propagates this requirement to the consumer without	
-# applying it to the library target itself.	
-target_link_options(${COMPONENT_LIB} INTERFACE -Wl,--gc-sections)
-
-# Add compile definitions
 target_compile_definitions(${COMPONENT_LIB} PRIVATE "$<$<CONFIG:DEBUG>:LT_REDUNDANT_ARG_CHECK>")
 
 # Propagate logging settings
@@ -486,95 +485,114 @@ target_compile_definitions(${COMPONENT_LIB} PUBLIC
     LT_LOG_ENABLE_ERROR=${LT_LOG_ENABLE_ERROR}
     LT_LOG_ENABLE_WARN=${LT_LOG_ENABLE_WARN}
     LT_LOG_ENABLE_INFO=${LT_LOG_ENABLE_INFO}
-)###########################################################################
-#                                                                         #	
-#   Compile and link                                                      #	
-#                                                                         #	
-###########################################################################	
+)
 
-# Conditionally apply strict compilation flags	
-if(LT_STRICT_COMP_FLAGS OR LT_BUILD_EXAMPLES OR LT_BUILD_TESTS)	
+###########################################################################
+#                                                                         #
+#   Compile and link                                                      #
+#                                                                         #
+###########################################################################
 
-    # 1. Apply the compiler options immediately for ESP-IDF builds.	
-    # Instead of using the interface library, apply flags directly to the target.	
-    target_compile_options(${COMPONENT_LIB} PRIVATE
-        -Wall
-        -Wextra
-        -Werror
-        -Wpedantic
-        -Wshadow
-        -Wformat=2
-        -Wcast-align
-        -Wfloat-equal
-        -Wnull-dereference
-        -Wredundant-decls
-        -Wlogical-op
-        -Wstrict-prototypes
-        -Wunused-result
-        -Wmissing-prototypes
-        -fstack-protector-strong
-    )
+# Conditionally apply strict compilation flags
+if(NOT LT_ESP_IDF_COMPONENT AND (LT_STRICT_COMP_FLAGS OR LT_BUILD_EXAMPLES OR LT_BUILD_TESTS))
 
-    # 2. Handle the cache variable for user visibility.	
-    # If the flag wasn't already ON, it means tests/examples implicitly enabled it.	
-    # We update the cache so the user sees the actual state in cmake-gui.	
-    if(NOT LT_STRICT_COMP_FLAGS)	
-        message(STATUS "Enabling strict compilation flags for libtropic because LT_BUILD_EXAMPLES or LT_BUILD_TESTS is ON.")	
-        set(LT_STRICT_COMP_FLAGS ON CACHE BOOL "Enable strict compilation flags for libtropic" FORCE)	
-    endif()	
+    # 1. Apply the compiler options immediately.
+    # This is the primary action of this block.
+    target_link_libraries(${COMPONENT_LIB} PRIVATE libtropic::strict_comp_flags)
 
-endif()	
+    # 2. Handle the cache variable for user visibility.
+    # If the flag wasn't already ON, it means tests/examples implicitly enabled it.
+    # We update the cache so the user sees the actual state in cmake-gui.
+    if(NOT LT_STRICT_COMP_FLAGS)
+        message(STATUS "Enabling strict compilation flags for libtropic because LT_BUILD_EXAMPLES or LT_BUILD_TESTS is ON.")
+        set(LT_STRICT_COMP_FLAGS ON CACHE BOOL "Enable strict compilation flags for libtropic" FORCE)
+    endif()
 
-###########################################################################	
-#                                                                         #	
-#   LT_CRYPTO handling                                                    #	
-#                                                                         #	
-###########################################################################	
+endif()
 
-# These are internal macros for crypto providers	
-set(LT_CRYPTO_TREZOR  0 CACHE INTERNAL "")	
-set(LT_CRYPTO_MBEDTLS 0 CACHE INTERNAL "")	
+###########################################################################
+#                                                                         #
+#   LT_CRYPTO handling                                                    #
+#                                                                         #
+###########################################################################
 
-# Handle LT_CRYPTO	
-if(LT_CRYPTO STREQUAL "trezor_crypto")	
+# These are internal macros for crypto providers
+set(LT_CRYPTO_TREZOR  0 CACHE INTERNAL "")
+set(LT_CRYPTO_MBEDTLS 0 CACHE INTERNAL "")
 
-    message(STATUS "Crypto provider set to trezor_crypto")	
-    set(LT_CRYPTO_TREZOR 1)	
+# Handle LT_CRYPTO
+if(LT_CRYPTO STREQUAL "trezor_crypto")
+    
+    message(STATUS "Crypto provider set to trezor_crypto")
+    set(LT_CRYPTO_TREZOR 1)
 
-    add_subdirectory(vendor/trezor_crypto/ "trezor_crypto")
-    target_compile_definitions(trezor_crypto PRIVATE AES_VAR AES_MODES USE_INSECURE_PRNG)	
-    target_link_libraries(${COMPONENT_LIB} PRIVATE trezor_crypto)	
+    if(NOT LT_ESP_IDF_COMPONENT)
+        add_subdirectory(vendor/trezor_crypto/ "trezor_crypto")
+        target_compile_definitions(trezor_crypto PRIVATE AES_VAR AES_MODES USE_INSECURE_PRNG)
+        target_link_libraries(${COMPONENT_LIB} PRIVATE trezor_crypto)
+    else()
+        # For ESP-IDF, we need to add trezor_crypto sources and include paths directly
+        # Exclude test files and platform-specific files that won't work on ESP32
+        file(GLOB TREZOR_CRYPTO_SRCS
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/*.c"
+        )
+        file(GLOB TREZOR_CRYPTO_AES_SRCS
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aes_modes.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aescrypt.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aeskey.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aestab.c"
+        )
+        file(GLOB TREZOR_CRYPTO_CHACHA_SRCS
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/chacha20poly1305/*.c"
+        )
+        file(GLOB TREZOR_CRYPTO_ED25519_SRCS
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/ed25519-donna/*.c"
+        )
+        
+        # Combine all sources but exclude test files
+        set(TREZOR_CRYPTO_ALL_SRCS 
+            ${TREZOR_CRYPTO_SRCS}
+            ${TREZOR_CRYPTO_AES_SRCS} 
+            ${TREZOR_CRYPTO_CHACHA_SRCS}
+            ${TREZOR_CRYPTO_ED25519_SRCS}
+        )
+        
+        # Filter out test files and other problematic files
+        list(FILTER TREZOR_CRYPTO_ALL_SRCS EXCLUDE REGEX ".*test.*|.*tst.*|.*zkp.*")
+        target_sources(${COMPONENT_LIB} PRIVATE ${TREZOR_CRYPTO_ALL_SRCS})
+        target_include_directories(${COMPONENT_LIB} PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/chacha20poly1305"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/ed25519-donna"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/secp256k1-zkp/include"
+        )
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE AES_VAR AES_MODES USE_INSECURE_PRNG)
+    endif()
 
-elseif(LT_CRYPTO STREQUAL "mbedtls")	
+elseif(LT_CRYPTO STREQUAL "mbedtls")
 
-    message(STATUS "Crypto provider set to mbedtls")	
-    set(LT_CRYPTO_MBEDTLS 1)	
+    message(STATUS "Crypto provider set to mbedtls")
+    set(LT_CRYPTO_MBEDTLS 1)
 
-else()	
+else()
 
-    get_property(lt_crypto_choices CACHE LT_CRYPTO PROPERTY STRINGS)	
-    message(FATAL_ERROR "Incorrect cryptographic provider set to LT_CRYPTO!\nAvailable providers: ${lt_crypto_choices}")	
+    get_property(lt_crypto_choices CACHE LT_CRYPTO PROPERTY STRINGS)
+    message(FATAL_ERROR "Incorrect cryptographic provider set to LT_CRYPTO!\nAvailable providers: ${lt_crypto_choices}")
+    
+endif()
 
-endif()	
+# Propagate crypto provider internal switches
+target_compile_definitions(${COMPONENT_LIB} PUBLIC
+    LT_CRYPTO_TREZOR=${LT_CRYPTO_TREZOR}
+    LT_CRYPTO_MBEDTLS=${LT_CRYPTO_MBEDTLS}
+)
 
-# Propagate crypto provider internal switches	
-target_compile_definitions(${COMPONENT_LIB} PUBLIC	
-    LT_CRYPTO_TREZOR=${LT_CRYPTO_TREZOR}	
-    LT_CRYPTO_MBEDTLS=${LT_CRYPTO_MBEDTLS}	
-    AES_MODES=1
-    AES_VAR=1
-)	
-
-###########################################################################	
-#                                                                         #	
-#   Other options handling                                                #	
-#                                                                         #	
-###########################################################################	
-
-
-
-
-
+###########################################################################
+#                                                                         #
+#   Other options handling                                                #
+#                                                                         #
+###########################################################################
 
 if (LT_SILICON_REV STREQUAL "ABAB")
     target_compile_definitions(${COMPONENT_LIB} PRIVATE ABAB)
@@ -582,7 +600,6 @@ elseif (LT_SILICON_REV STREQUAL "ACAB")
     target_compile_definitions(${COMPONENT_LIB} PRIVATE ACAB)
 endif()
 
-# Other options
 if(LT_PRINT_SPI_DATA)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE LT_PRINT_SPI_DATA)
 endif()
@@ -598,5 +615,3 @@ endif()
 if(LT_SEPARATE_L3_BUFF)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE LT_SEPARATE_L3_BUFF)
 endif()
-
-
