@@ -189,20 +189,20 @@ lt_ret_t lt_port_deinit(lt_handle_t *h)
 
 /* ───────────────────────── SPI transfer ─────────────────────────
  * Matches STM32 behavior:
- * - Full-duplex in-place over h->l2_buff[offset .. offset+tx_data_length).
+ * - Full-duplex in-place over h->l2.buff[offset .. offset+tx_data_length).
  * - Blocks until complete. 'timeout' not used (ESP-IDF call is blocking).
  */
 lt_ret_t lt_port_spi_transfer(lt_handle_t *h, uint8_t offset, uint16_t tx_data_length, uint32_t timeout)
 {
     LT_UNUSED(timeout);
 
-    if (!h || !h->l2_buff || !s_dev) return LT_L1_SPI_ERROR;
+    if (!h || !h->l2.buff || !s_dev) return LT_L1_SPI_ERROR;
 
     if ((size_t)offset + (size_t)tx_data_length > TR01_L1_LEN_MAX) {
         return LT_L1_DATA_LEN_ERROR;
     }
 
-    uint8_t *buf = h->l2_buff + offset;
+    uint8_t *buf = h->l2.buff + offset;
 
     // Use a TX shadow to avoid overwriting TX data before RX completes
     uint8_t *tx_shadow = (uint8_t*)alloca(tx_data_length);
