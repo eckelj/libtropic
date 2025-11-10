@@ -535,7 +535,7 @@ if(LT_CRYPTO STREQUAL "trezor_crypto")
 
     if(NOT LT_ESP_IDF_COMPONENT)
         add_subdirectory(vendor/trezor_crypto/ "trezor_crypto")
-        target_compile_definitions(trezor_crypto PRIVATE AES_VAR AES_MODES USE_INSECURE_PRNG)
+        target_compile_definitions(trezor_crypto PRIVATE AES_VAR USE_INSECURE_PRNG)
         target_link_libraries(${COMPONENT_LIB} PRIVATE trezor_crypto)
     else()
         # For ESP-IDF, we need to add trezor_crypto sources and include paths directly
@@ -575,7 +575,7 @@ if(LT_CRYPTO STREQUAL "trezor_crypto")
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/chacha20poly1305"
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/ed25519-donna"
         )
-        target_compile_definitions(${COMPONENT_LIB} PRIVATE AES_VAR AES_MODES USE_INSECURE_PRNG)
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE AES_VAR USE_INSECURE_PRNG)
     endif()
 
 elseif(LT_CRYPTO STREQUAL "mbedtls")

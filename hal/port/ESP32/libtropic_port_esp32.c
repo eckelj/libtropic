@@ -10,8 +10,6 @@
 #include "driver/gpio.h"
 #include "esp_random.h"
 #include "esp_timer.h"
-#include "esp_err.h"
-#include "esp_log.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -65,9 +63,8 @@ static spi_device_handle_t s_dev = NULL;
 static bool s_bus_owned = false;
 
 /* tiny helpers like your demo */
-static inline void udelay(uint32_t us) { esp_rom_delay_us(us); }
-static inline void cs_low(void){ gpio_set_level(LT_ESP_SPI_CS, 0); udelay(2);}
-static inline void cs_high(void){ gpio_set_level(LT_ESP_SPI_CS, 1); udelay(2);}
+static inline void cs_low(void){ gpio_set_level(LT_ESP_SPI_CS, 0); }
+static inline void cs_high(void){ gpio_set_level(LT_ESP_SPI_CS, 1);}
 
 /* ───────────────────────── RNG (matches STM32 API) ─────────────────────────
  * STM32: lt_port_random_bytes(uint32_t *buff, uint16_t len) returns len 32-bit words.
@@ -158,9 +155,6 @@ lt_ret_t lt_port_init(lt_l2_state_t *s2)
         s_dev = NULL;
         return LT_L1_SPI_ERROR;
     }
-    ESP_EARLY_LOGI(TAG, "SPI ready host=%d mode=%d clk=%dHz mosi=%d miso=%d sclk=%d cs=%d",
-                   LT_ESP_SPI_HOST, LT_ESP_SPI_MODE, LT_ESP_SPI_CLOCK_HZ,
-                   LT_ESP_SPI_MOSI, LT_ESP_SPI_MISO, LT_ESP_SPI_SCLK, LT_ESP_SPI_CS);
 
     return LT_OK;
 }
@@ -190,16 +184,10 @@ lt_ret_t lt_port_spi_transfer(lt_l2_state_t *s2, uint8_t offset, uint16_t tx_len
     LT_UNUSED(timeout_ms);
 
     if (!s2 || !s_dev) {
-        ESP_LOGE(TAG, "SPI transfer: invalid state (s2=%p, s_dev=%p)", s2, s_dev);
         return LT_L1_SPI_ERROR;
     }
 
-    ESP_LOGI(TAG, "SPI transfer: offset=%u, tx_len=%u, TR01_L1_LEN_MAX=%d", 
-             offset, tx_len, TR01_L1_LEN_MAX);
-
     if ((size_t)offset + (size_t)tx_len > TR01_L1_LEN_MAX) {
-        ESP_LOGE(TAG, "SPI transfer: length error (offset=%u + tx_len=%u = %u > max=%d)", 
-                 offset, tx_len, offset + tx_len, TR01_L1_LEN_MAX);
         return LT_L1_DATA_LEN_ERROR;
     }
 
@@ -209,12 +197,6 @@ lt_ret_t lt_port_spi_transfer(lt_l2_state_t *s2, uint8_t offset, uint16_t tx_len
     uint8_t *tx_shadow = (uint8_t*)alloca(tx_len);
     memcpy(tx_shadow, buf, tx_len);
 
-    // Debug: print what we're sending
-    printf("SPI TX[%u]: ", tx_len);
-    for (int i = 0; i < tx_len && i < 16; i++) {
-        printf("%02X ", tx_shadow[i]);
-    }
-    printf("\r\n");
 
     spi_transaction_t t = {
         .length = (size_t)tx_len * 8,
@@ -226,12 +208,6 @@ lt_ret_t lt_port_spi_transfer(lt_l2_state_t *s2, uint8_t offset, uint16_t tx_len
     // Do NOT toggle CS here or it will break the transaction
     esp_err_t er = spi_device_transmit(s_dev, &t);
 
-    // Debug: print what we received
-    printf("SPI RX[%u]: ", tx_len);
-    for (int i = 0; i < tx_len && i < 16  && buf != NULL ; i++) {
-        printf("%02X ", buf[i]);
-    }
-    printf("\r\n");
 
     if (er != ESP_OK) {
         return LT_L1_SPI_ERROR;
