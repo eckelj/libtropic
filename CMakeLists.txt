@@ -574,7 +574,6 @@ if(LT_CRYPTO STREQUAL "trezor_crypto")
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes"
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/chacha20poly1305"
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/ed25519-donna"
-            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/secp256k1-zkp/include"
         )
         target_compile_definitions(${COMPONENT_LIB} PRIVATE AES_VAR AES_MODES USE_INSECURE_PRNG)
     endif()
