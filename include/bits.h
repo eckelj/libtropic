@@ -27,9 +27,13 @@ extern "C" {
 #define _U(x) (_AC(x, U))
 #define U(x) (_U(x))
 
+#ifndef BIT
 #define BIT(nr) (1U << (nr))
+#endif
 
+#ifndef BIT64
 #define BIT64(nr) (((u64)(1)) << ((u64)(nr)))
+#endif 
 
 // BIT defines a bit mask for the specified bit number from 0 to whatever fits into an unsigned long
 // so BIT(10) should evaluate to decimal 1024 (which is binary 1 left shifted by 10 bits)
