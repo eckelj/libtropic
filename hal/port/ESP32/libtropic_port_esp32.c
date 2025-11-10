@@ -20,7 +20,7 @@
 #include "libtropic_common.h"
 #include "libtropic_port.h"     // lt_handle_t, TR01_L1_LEN_MAX, lt_ret_t, LT_OK, etc.
 
-#define TAG "lt_port_esp32p4"
+#define TAG "libtropic_port_esp32"
 
 /* ──────────────────── Wiring / SPI config (edit if needed) ────────────────────
    These are set to the same pins + mode as your working ESP32-P4 Tropic01 demo.
@@ -82,27 +82,24 @@ static inline void cs_high(void){ gpio_set_level(LT_P4_SPI_CS, 1); }
 }
 
 /* ───────────────────────── CS control ───────────────────────── */
-lt_ret_t lt_port_spi_csn_low(lt_handle_t *h)
+lt_ret_t lt_port_spi_csn_low(lt_l2_state_t *s2)
 {
-    LT_UNUSED(h);
+    LT_UNUSED(s2);
     cs_low();
-    // optional readback (GPIO is immediate on ESP32-P4)
-    while (gpio_get_level(LT_P4_SPI_CS) != 0) { /* spin */ }
     return LT_OK;
 }
 
-lt_ret_t lt_port_spi_csn_high(lt_handle_t *h)
+lt_ret_t lt_port_spi_csn_high(lt_l2_state_t *s2)
 {
-    LT_UNUSED(h);
+    LT_UNUSED(s2);
     cs_high();
-    while (gpio_get_level(LT_P4_SPI_CS) != 1) { /* spin */ }
     return LT_OK;
 }
 
 /* ───────────────────────── Init / Deinit ───────────────────────── */
-lt_ret_t lt_port_init(lt_handle_t *h)
+lt_ret_t lt_port_init(lt_l2_state_t *s2)
 {
-    LT_UNUSED(h);
+    LT_UNUSED(s2);
 
     // Configure CS GPIO (manual)
     gpio_config_t io_cs = {
@@ -172,9 +169,9 @@ lt_ret_t lt_port_init(lt_handle_t *h)
     return LT_OK;
 }
 
-lt_ret_t lt_port_deinit(lt_handle_t *h)
+lt_ret_t lt_port_deinit(lt_l2_state_t *s2)
 {
-    LT_UNUSED(h);
+    LT_UNUSED(s2);
 
     if (s_dev) {
         spi_bus_remove_device(s_dev);
@@ -189,27 +186,27 @@ lt_ret_t lt_port_deinit(lt_handle_t *h)
 
 /* ───────────────────────── SPI transfer ─────────────────────────
  * Matches STM32 behavior:
- * - Full-duplex in-place over h->l2.buff[offset .. offset+tx_data_length).
- * - Blocks until complete. 'timeout' not used (ESP-IDF call is blocking).
+ * - Full-duplex in-place over s2->buff[offset .. offset+tx_len).
+ * - Blocks until complete. 'timeout_ms' not used (ESP-IDF call is blocking).
  */
-lt_ret_t lt_port_spi_transfer(lt_handle_t *h, uint8_t offset, uint16_t tx_data_length, uint32_t timeout)
+lt_ret_t lt_port_spi_transfer(lt_l2_state_t *s2, uint8_t offset, uint16_t tx_len, uint32_t timeout_ms)
 {
-    LT_UNUSED(timeout);
+    LT_UNUSED(timeout_ms);
 
-    if (!h || !h->l2.buff || !s_dev) return LT_L1_SPI_ERROR;
+    if (!s2 || !s_dev) return LT_L1_SPI_ERROR;
 
-    if ((size_t)offset + (size_t)tx_data_length > TR01_L1_LEN_MAX) {
+    if ((size_t)offset + (size_t)tx_len > TR01_L1_LEN_MAX) {
         return LT_L1_DATA_LEN_ERROR;
     }
 
-    uint8_t *buf = h->l2.buff + offset;
+    uint8_t *buf = s2->buff + offset;
 
     // Use a TX shadow to avoid overwriting TX data before RX completes
-    uint8_t *tx_shadow = (uint8_t*)alloca(tx_data_length);
-    memcpy(tx_shadow, buf, tx_data_length);
+    uint8_t *tx_shadow = (uint8_t*)alloca(tx_len);
+    memcpy(tx_shadow, buf, tx_len);
 
     spi_transaction_t t = {
-        .length = (size_t)tx_data_length * 8,
+        .length = (size_t)tx_len * 8,
         .tx_buffer = tx_shadow,
         .rx_buffer = buf
     };
@@ -225,18 +222,18 @@ lt_ret_t lt_port_spi_transfer(lt_handle_t *h, uint8_t offset, uint16_t tx_data_l
 }
 
 /* ───────────────────────── Delays ───────────────────────── */
-lt_ret_t lt_port_delay(lt_handle_t *h, uint32_t ms)
+lt_ret_t lt_port_delay(lt_l2_state_t *s2, uint32_t ms)
 {
-    LT_UNUSED(h);
+    LT_UNUSED(s2);
     vTaskDelay(pdMS_TO_TICKS(ms));
     return LT_OK;
 }
 
 #if LT_USE_INT_PIN
 /* Optional: wait until INT is high, or timeout (ms) */
-lt_ret_t lt_port_delay_on_int(lt_handle_t *h, uint32_t ms)
+lt_ret_t lt_port_delay_on_int(lt_l2_state_t *s2, uint32_t ms)
 {
-    LT_UNUSED(h);
+    LT_UNUSED(s2);
     int64_t start = esp_timer_get_time();
     int64_t deadline = start + (int64_t)ms * 1000;
     while (esp_timer_get_time() < deadline) {

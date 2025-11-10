@@ -194,6 +194,13 @@ set(SDK_SRCS ${SDK_SRCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lt_asn1_der.c
 )
 
+# Add ESP32 port implementation if building for ESP-IDF
+if(LT_ESP_IDF_COMPONENT)
+    set(SDK_SRCS ${SDK_SRCS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/hal/port/ESP32/libtropic_port_esp32.c
+    )
+endif()
+
 set(SDK_INCS ${SDK_INCS}
     ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic_common.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/libtropic.h
@@ -449,7 +456,7 @@ if(LT_ESP_IDF_COMPONENT)
     idf_component_register(SRCS ${SDK_SRCS}
                          INCLUDE_DIRS ${SDK_DIRS_PUB}
                          PRIV_INCLUDE_DIRS ${SDK_DIRS_PRIV}
-                         REQUIRES mbedtls)
+                         REQUIRES mbedtls driver esp_timer)
     
     # Set the component (library) name for ESP-IDF
     set(COMPONENT_LIB __idf_libtropic)
@@ -539,8 +546,10 @@ if(LT_CRYPTO STREQUAL "trezor_crypto")
         file(GLOB TREZOR_CRYPTO_AES_SRCS
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aes_modes.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aescrypt.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aesgcm.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aeskey.c"
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/aestab.c"
+            "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/aes/gf128mul.c"
         )
         file(GLOB TREZOR_CRYPTO_CHACHA_SRCS
             "${CMAKE_CURRENT_SOURCE_DIR}/vendor/trezor_crypto/chacha20poly1305/*.c"
